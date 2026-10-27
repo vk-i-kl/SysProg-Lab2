@@ -7,6 +7,7 @@
 #include <deque>
 #include <vector>
 #include <cmath>
+#include <windows.h>
 #include <chrono>
 
 using namespace std;
@@ -62,8 +63,8 @@ void DataProcessing_1() {
 
 void task1() {
     thread t1(DataPreparation_1);
-    t1.detach(); 
-    DataProcessing_1(); 
+    t1.detach();
+    DataProcessing_1();
 }
 
 // 1.2.2
@@ -74,7 +75,7 @@ int global_i_1_2_2 = 0;
 void Waits_2(int id) {
     cout << "[1.2.2] Потік " << id << " входить у стан очікування.\n";
     unique_lock<mutex> lk(m1_2_2);
-    cv1_2_2.wait(lk, []{ return global_i_1_2_2 == 1; });
+    cv1_2_2.wait(lk, [] { return global_i_1_2_2 == 1; });
     cout << "[1.2.2] Потік " << id << " завершив очікування.\n";
 }
 
@@ -82,7 +83,7 @@ void Awake_2() {
     this_thread::sleep_for(chrono::milliseconds(100));
     cout << "[1.2.2] Awake починає повідомляти решту (notify_all).\n";
     cv1_2_2.notify_all();
-    
+
     this_thread::sleep_for(chrono::milliseconds(100));
     {
         lock_guard<mutex> lk(m1_2_2);
@@ -108,7 +109,7 @@ int global_i_1_2_3 = 0;
 
 void Waits_3(int id) {
     unique_lock<mutex> lk(m1_2_3);
-    cv1_2_3.wait(lk, []{ return global_i_1_2_3 == 1; });
+    cv1_2_3.wait(lk, [] { return global_i_1_2_3 == 1; });
     cout << "[1.2.3] Повідомлення з потоку " << id << endl;
 }
 
@@ -128,7 +129,7 @@ void task3() {
     thread t2(Waits_3, 2);
     thread t3(Waits_3, 3);
     thread nt(Notify_3);
-    
+
     nt.join();
     {
         lock_guard<mutex> lk(m1_2_3);
@@ -160,8 +161,8 @@ void DataPreparation_4() {
 
 void DataProcessing_4() {
     unique_lock<mutex> lk(m1_2_4);
-    cv1_2_4.wait(lk, []{ return !q1_2_4.empty() || finished_1_2_4; });
-    
+    cv1_2_4.wait(lk, [] { return !q1_2_4.empty() || finished_1_2_4; });
+
     cout << "[1.2.4] Прості числа: ";
     while (!q1_2_4.empty()) {
         int num = q1_2_4.front();
@@ -173,8 +174,8 @@ void DataProcessing_4() {
 
 void task4() {
     finished_1_2_4 = false;
-    while(!q1_2_4.empty()) q1_2_4.pop();
-    
+    while (!q1_2_4.empty()) q1_2_4.pop();
+
     thread t1(DataPreparation_4);
     t1.detach();
     DataProcessing_4();
@@ -191,13 +192,13 @@ void task5() {
     cout << "[Deferred] Функція (sqrt) від n: " << sqrt(n) << endl;
     cout << "[Deferred] n-те просте число: " << f_deferred.get() << endl;
     auto end_def = chrono::high_resolution_clock::now();
-    
+
     auto start_async = chrono::high_resolution_clock::now();
     future<int> f_async = async(launch::async, nthPrime, n);
     cout << "[Async] Функція (sin) від n: " << sin(n) << endl;
     cout << "[Async] n-те просте число: " << f_async.get() << endl;
     auto end_async = chrono::high_resolution_clock::now();
-    
+
     cout << "Час Deferred: " << chrono::duration_cast<chrono::milliseconds>(end_def - start_def).count() << " ms\n";
     cout << "Час Async: " << chrono::duration_cast<chrono::milliseconds>(end_async - start_async).count() << " ms\n";
 }
@@ -215,15 +216,15 @@ void Worker_6() {
         int n_val = 0;
         {
             unique_lock<mutex> lk(m1_2_6);
-            cv1_2_6.wait(lk, []{ return !tasks_1_2_6.empty() || done_1_2_6; });
+            cv1_2_6.wait(lk, [] { return !tasks_1_2_6.empty() || done_1_2_6; });
             if (done_1_2_6 && tasks_1_2_6.empty()) return;
-            
+
             task = move(tasks_1_2_6.front());
             tasks_1_2_6.pop_front();
             n_val = ns_1_2_6.front();
             ns_1_2_6.pop_front();
         }
-        task(); 
+        task();
     }
 }
 
@@ -232,7 +233,7 @@ void task6() {
     thread worker(Worker_6);
     vector<future<int>> futures;
     vector<int> req_ns;
-    
+
     cout << "[1.2.6] Вводьте номери n-тих простих чисел (-1 для стоп): \n";
     int n;
     while (cin >> n && n != -1) {
@@ -246,13 +247,13 @@ void task6() {
         }
         cv1_2_6.notify_one();
     }
-    
+
     {
         lock_guard<mutex> lk(m1_2_6);
         done_1_2_6 = true;
     }
     cv1_2_6.notify_one();
-    
+
     for (size_t i = 0; i < futures.size(); i++) {
         cout << req_ns[i] << "-те просте число: " << futures[i].get() << endl;
     }
@@ -277,38 +278,43 @@ void task7() {
     int n;
     cout << "[1.2.7] Введіть номер n: ";
     cin >> n;
-    
+
     promise<int> p_n, p_n10;
     promise<bool> p_bool;
-    
+
     future<int> f_n = p_n.get_future();
     future<int> f_n10 = p_n10.get_future();
     future<bool> f_bool = p_bool.get_future();
-    
+
     thread t1(Thread1_7, n, move(p_n), move(p_bool), move(p_n10));
     thread t2(Thread2_7, n, move(f_bool));
-    
+
     cout << "[Головний потік] " << n << "-те просте число: " << f_n.get() << endl;
-    cout << "[Головний потік] " << n*10 << "-те просте число: " << f_n10.get() << endl;
-    
+    cout << "[Головний потік] " << n * 10 << "-те просте число: " << f_n10.get() << endl;
+
     t1.join();
     t2.join();
 }
 
 int main() {
+
+    SetConsoleCP(65001);
+    SetConsoleOutputCP(65001);
+
+
     int choice;
     do {
         cout << "\nЛабораторна робота №2\n";
         cout << "Оберіть завдання (1-7) або 0 для виходу: ";
         cin >> choice;
         switch (choice) {
-            case 1: task1(); break;
-            case 2: task2(); break;
-            case 3: task3(); break;
-            case 4: task4(); break;
-            case 5: task5(); break;
-            case 6: task6(); break;
-            case 7: task7(); break;
+        case 1: task1(); break;
+        case 2: task2(); break;
+        case 3: task3(); break;
+        case 4: task4(); break;
+        case 5: task5(); break;
+        case 6: task6(); break;
+        case 7: task7(); break;
         }
     } while (choice != 0);
     return 0;
